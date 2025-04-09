@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>מפת לקוחות לפי סוכן</title>
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    async function initMap() {
+      const center = { lat: 32.0, lng: 35.0 };
+      const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 8,
+        center: center,
+      });
+
+      const response = await fetch('clients.json');
+      const clients = await response.json();
+
+      const markers = [];
+
+      clients.forEach(client => {
+        const agent = client["שם סוכן"]?.trim();
+
+        if (client.Latitude && client.Longitude) {
+          const marker = new google.maps.Marker({
+            position: { lat: client.Latitude, lng: client.Longitude },
+            title: client["שם לקוח"],
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: agent === "איילה" ? "blue" : "green",
+              fillOpacity: 1,
+              strokeWeight: 1,
+            }
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="direction: rtl; font-family: Arial; font-size: 14px;">
+                <strong>שם לקוח:</strong> ${client["שם לקוח"]}<br/>
+                <strong>סוכן:</strong> ${client["שם סוכן"]}<br/>
+                <strong>עיר:</strong> ${client["עיר ומדינה"]}
+              </div>
+            `
+          });
+
+          marker.addListener("click", () => {
+            infoWindow.open(map, marker);
+          });
+
+          markers.push(marker);
+        }
+      });
+
+      // יצירת קלאסטרים
+      new MarkerClusterer(map, markers, {
+        imagePath:
+          "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"
+      });
+    }
+  </script>
+
+  <!-- טעינת Google Maps API עם KEY -->
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBXgc3c0w7d-7hSlRK1Vfxdh_Fhnf4_PSw&callback=initMap">
+  </script>
+
+  <!-- טעינת MarkerClusterer הרשמי -->
+  <script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+</body>
+</html>
