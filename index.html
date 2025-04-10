@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="utf-8" />
+  <title>מפת לקוחות לפי סוכן</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 0;
+    }
+    #search {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      width: 300px;
+      direction: rtl;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+  <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+</head>
+<body>
+  <input id="search" type="text" placeholder="חפש לפי שם לקוח..." />
+  <div id="map"></div>
+
+  <script>
+    let map;
+    let markers = [];
+    let infoWindows = [];
+
+    async function initMap() {
+      const center = { lat: 32.0, lng: 35.0 };
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 8,
+        center: center,
+      });
+
+      const response = await fetch('clients.json');
+      const clients = await response.json();
+
+      clients.forEach(client => {
+        const agent = client["שם סוכן"]?.trim();
+        if (client.Latitude && client.Longitude) {
+          const offsetLat = client.Latitude + (Math.random() - 0.5) * 0.001;
+          const offsetLng = client.Longitude + (Math.random() - 0.5) * 0.001;
+
+          const marker = new google.maps.Marker({
+            position: { lat: offsetLat, lng: offsetLng },
+            title: client["שם לקוח"],
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: agent === "איילה" ? "blue" : "green",
+              fillOpacity: 1,
+              strokeWeight: 1,
+            },
+            map: map
+          });
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="direction: rtl; font-size: 14px;">
+                <strong>שם לקוח:</strong> ${client["שם לקוח"]}<br/>
+                <strong>סוכן:</strong> ${client["שם סוכן"]}<br/>
+                <strong>עיר:</strong> ${client["עיר ומדינה"]}
+              </div>
+            `
+          });
+
+          marker.addListener("click", () => {
+            infoWindows.forEach(iw => iw.close());
+            infoWindow.open(map, marker);
+          });
+
+          markers.push({ marker, name: client["שם לקוח"], infoWindow });
+          infoWindows.push(infoWindow);
+        }
+      });
+
+      new markerClusterer.MarkerClusterer({ markers: markers.map(m => m.marker), map });
+
+      // שורת חיפוש לפי שם לקוח
+      document.getElementById("search").addEventListener("input", e => {
+        const query = e.target.value.trim();
+        if (query === "") return;
+
+        const result = markers.find(m => m.name.includes(query));
+        if (result) {
+          map.setCenter(result.marker.getPosition());
+          map.setZoom(15);
+          infoWindows.forEach(iw => iw.close());
+          result.infoWindow.open(map, result.marker);
+        }
+      });
+    }
+  </script>
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBXgc3c0w7d-7hSlRK1Vfxdh_Fhnf4_PSw&callback=initMap">
+  </script>
+</body>
+</html>
